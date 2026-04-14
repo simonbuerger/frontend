@@ -28,7 +28,7 @@ import "./ha-alert";
 import {
   extractAssistChatRichContent,
   type AssistChatRichContent,
-} from "./assist-chat-rich-content";
+} from "./assist-chat-rich-content-types";
 import "./ha-assist-chat-rich-content";
 import "./ha-markdown";
 import "./input/ha-input";
@@ -156,7 +156,7 @@ export class HaAssistChat extends LitElement {
           (message, index) => html`
             <div class="message-container ${classMap({ [message.who]: true })}">
               ${message.text ||
-              (message.rich_content && message.rich_content.length > 0) ||
+              message.rich_content?.length ||
               message.error ||
               message.thinking ||
               (message.tool_calls && Object.keys(message.tool_calls).length > 0)
@@ -616,6 +616,23 @@ ${JSON.stringify(toolCall.result, null, 2)}</pre
     }
   }
 
+  private _finalizeMessageText(
+    response: string | undefined,
+    currentText: AssistMessage["text"]
+  ): AssistMessage["text"] {
+    const nextText = response ?? currentText;
+
+    if (typeof nextText !== "string") {
+      return nextText;
+    }
+
+    const keepLoadingPlaceholder = response == null && nextText === "…";
+
+    return nextText.endsWith("…") && !keepLoadingPlaceholder
+      ? nextText.slice(0, -1)
+      : nextText;
+  }
+
   private _createAddHassMessageProcessor() {
     let currentDeltaRole = "";
 
@@ -720,16 +737,13 @@ ${JSON.stringify(toolCall.result, null, 2)}</pre
           progress.hassMessage.rich_content = extractAssistChatRichContent(
             plainSpeech?.extra_data
           );
-          if (!response && !progress.hassMessage.rich_content.length) {
+          if (response == null && !progress.hassMessage.rich_content.length) {
             return;
           }
-          progress.hassMessage.text = response ?? progress.hassMessage.text;
-          if (
-            typeof progress.hassMessage.text === "string" &&
-            progress.hassMessage.text.endsWith("…")
-          ) {
-            progress.hassMessage.text = progress.hassMessage.text.slice(0, -1);
-          }
+          progress.hassMessage.text = this._finalizeMessageText(
+            response,
+            progress.hassMessage.text
+          );
           if (event.data.intent_output.response.response_type === "error") {
             progress.setError(response ?? "");
           } else {

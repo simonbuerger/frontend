@@ -1,8 +1,11 @@
 import { LitElement, css, html, nothing } from "lit";
-import type { TemplateResult } from "lit";
+import type { PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators";
 import type { HomeAssistant } from "../types";
-import type { AssistChatRichContent } from "./assist-chat-rich-content";
+import {
+  getEntityId,
+  type AssistChatRichContent,
+} from "./assist-chat-rich-content-types";
 
 const stringifyBlock = (value: unknown): string =>
   JSON.stringify(value, null, 2);
@@ -16,9 +19,13 @@ export class HaAssistChatRichContent extends LitElement {
 
   @state() private _markdownLoaded = !!customElements.get("ha-markdown");
 
-  protected willUpdate() {
+  @state() private _markdownLoadFailed = false;
+
+  protected willUpdate(changedProps: PropertyValues<this>) {
     if (
+      changedProps.has("content") &&
       !this._markdownLoaded &&
+      !this._markdownLoadFailed &&
       this.content.some((block) => block.type === "markdown")
     ) {
       this._loadMarkdown();
@@ -54,8 +61,12 @@ export class HaAssistChatRichContent extends LitElement {
   }
 
   private async _loadMarkdown() {
-    await import("./ha-markdown");
-    this._markdownLoaded = true;
+    try {
+      await import("./ha-markdown");
+      this._markdownLoaded = true;
+    } catch (_err) {
+      this._markdownLoadFailed = true;
+    }
   }
 
   private _renderTextBlock(
@@ -104,12 +115,7 @@ export class HaAssistChatRichContent extends LitElement {
     block: AssistChatRichContent,
     _index: number
   ): TemplateResult {
-    const entityId =
-      typeof block.entity_id === "string"
-        ? block.entity_id
-        : typeof block.entityId === "string"
-          ? block.entityId
-          : undefined;
+    const entityId = getEntityId(block);
 
     if (!entityId) {
       return this._renderFallbackBlock(block);
@@ -124,14 +130,27 @@ export class HaAssistChatRichContent extends LitElement {
     const stateObj = this.hass.states[entityId];
 
     if (!stateObj) {
-      return html`<div class="entity-name">${entityId}</div>`;
+      return html`<div
+        class="entity-summary"
+        role="article"
+        aria-label=${entityId}
+      >
+        <div class="entity-name">${entityId}</div>
+      </div>`;
     }
 
+    const entityName = this.hass.formatEntityName(stateObj, { type: "entity" });
+    const entityState = this.hass.formatEntityState(stateObj);
+
     return html`
-      <div class="entity-name">
-        ${this.hass.formatEntityName(stateObj, { type: "entity" })}
+      <div
+        class="entity-summary"
+        role="article"
+        aria-label=${`${entityName}: ${entityState}`}
+      >
+        <div class="entity-name">${entityName}</div>
+        <div class="entity-state">${entityState}</div>
       </div>
-      <div class="entity-state">${this.hass.formatEntityState(stateObj)}</div>
     `;
   }
 
@@ -167,7 +186,7 @@ export class HaAssistChatRichContent extends LitElement {
     }
 
     .entity-name {
-      font-weight: var(--ha-font-weight-medium, 500);
+      font-weight: var(--ha-font-weight-medium);
     }
 
     .entity-state {

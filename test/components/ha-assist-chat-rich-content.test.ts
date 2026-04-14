@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractAssistChatRichContent } from "../../src/components/assist-chat-rich-content";
+import { extractAssistChatRichContent } from "../../src/components/assist-chat-rich-content-types";
 
 describe("extractAssistChatRichContent", () => {
   it("extracts snake_case rich content arrays", () => {

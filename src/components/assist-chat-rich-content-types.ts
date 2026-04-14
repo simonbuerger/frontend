@@ -13,6 +13,11 @@ const isAssistChatRichContent = (
 ): value is AssistChatRichContent =>
   isObject(value) && typeof value.type === "string";
 
+/**
+ * Supports the raw array shape as well as `rich_content` and `richContent`
+ * wrappers so Assist responses can pass through backend-native snake_case data
+ * or frontend-authored camelCase data without additional translation.
+ */
 export const extractAssistChatRichContent = (
   extraData: unknown
 ): AssistChatRichContent[] => {
@@ -26,3 +31,12 @@ export const extractAssistChatRichContent = (
 
   return candidate?.filter(isAssistChatRichContent) ?? [];
 };
+
+export const getEntityId = (
+  block: AssistChatRichContent
+): string | undefined =>
+  typeof block.entity_id === "string"
+    ? block.entity_id
+    : typeof block.entityId === "string"
+      ? block.entityId
+      : undefined;
