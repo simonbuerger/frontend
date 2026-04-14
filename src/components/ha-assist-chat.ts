@@ -25,6 +25,11 @@ import type { HomeAssistant } from "../types";
 import { AudioRecorder } from "../util/audio-recorder";
 import { documentationUrl } from "../util/documentation-url";
 import "./ha-alert";
+import {
+  extractAssistChatRichContent,
+  type AssistChatRichContent,
+} from "./assist-chat-rich-content";
+import "./ha-assist-chat-rich-content";
 import "./ha-markdown";
 import "./input/ha-input";
 import type { HaInput } from "./input/ha-input";
@@ -32,6 +37,7 @@ import type { HaInput } from "./input/ha-input";
 interface AssistMessage {
   who: string;
   text: string | TemplateResult;
+  rich_content?: AssistChatRichContent[];
   thinking: string;
   thinking_expanded?: boolean;
   tool_calls: Record<
@@ -39,7 +45,7 @@ interface AssistMessage {
     {
       tool_name: string;
       tool_args: Record<string, unknown>;
-      result?: any;
+      result?: unknown;
     }
   >;
   error?: boolean;
@@ -87,6 +93,7 @@ export class HaAssistChat extends LitElement {
         {
           who: "hass",
           text: this.hass.localize("ui.dialogs.voice_command.how_can_i_help"),
+          rich_content: [],
           thinking: "",
           tool_calls: {},
         },
@@ -149,6 +156,7 @@ export class HaAssistChat extends LitElement {
           (message, index) => html`
             <div class="message-container ${classMap({ [message.who]: true })}">
               ${message.text ||
+              (message.rich_content && message.rich_content.length > 0) ||
               message.error ||
               message.thinking ||
               (message.tool_calls && Object.keys(message.tool_calls).length > 0)
@@ -237,6 +245,14 @@ ${JSON.stringify(toolCall.result, null, 2)}</pre
                               cache
                               .content=${message.text}
                             ></ha-markdown>
+                          `
+                        : nothing}
+                      ${message.rich_content?.length
+                        ? html`
+                            <ha-assist-chat-rich-content
+                              .hass=${this.hass}
+                              .content=${message.rich_content}
+                            ></ha-assist-chat-rich-content>
                           `
                         : nothing}
                     </div>
@@ -619,6 +635,7 @@ ${JSON.stringify(toolCall.result, null, 2)}</pre
       progress.hassMessage = {
         who: "hass",
         text: "…",
+        rich_content: [] as AssistChatRichContent[],
         thinking: "",
         tool_calls: {},
         error: false,
@@ -641,6 +658,7 @@ ${JSON.stringify(toolCall.result, null, 2)}</pre
       hassMessage: {
         who: "hass",
         text: "…",
+        rich_content: [] as AssistChatRichContent[],
         thinking: "",
         tool_calls: {},
         error: false,
@@ -697,15 +715,24 @@ ${JSON.stringify(toolCall.result, null, 2)}</pre
           this._conversationId = event.data.intent_output.conversation_id;
           progress.continueConversation =
             event.data.intent_output.continue_conversation;
-          const response =
-            event.data.intent_output.response.speech?.plain.speech;
-          if (!response) {
+          const plainSpeech = event.data.intent_output.response.speech?.plain;
+          const response = plainSpeech?.speech;
+          progress.hassMessage.rich_content = extractAssistChatRichContent(
+            plainSpeech?.extra_data
+          );
+          if (!response && !progress.hassMessage.rich_content.length) {
             return;
           }
+          progress.hassMessage.text = response ?? progress.hassMessage.text;
+          if (
+            typeof progress.hassMessage.text === "string" &&
+            progress.hassMessage.text.endsWith("…")
+          ) {
+            progress.hassMessage.text = progress.hassMessage.text.slice(0, -1);
+          }
           if (event.data.intent_output.response.response_type === "error") {
-            progress.setError(response);
+            progress.setError(response ?? "");
           } else {
-            progress.hassMessage.text = response;
             this.requestUpdate("_conversation");
           }
         }

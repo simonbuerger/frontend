@@ -13,7 +13,10 @@ interface IntentTarget {
 
 interface IntentResultBase {
   language: string;
-  speech: Record<"plain" | "ssml", { extra_data: any; speech: string }> | null;
+  speech: Record<
+    "plain" | "ssml",
+    { extra_data: unknown; speech: string }
+  > | null;
 }
 
 interface IntentResultActionDone extends IntentResultBase {
