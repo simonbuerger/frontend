@@ -1,6 +1,6 @@
 import { LitElement, css, html, nothing } from "lit";
 import type { TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators";
+import { customElement, property, state } from "lit/decorators";
 import type { HomeAssistant } from "../types";
 import type { AssistChatRichContent } from "./assist-chat-rich-content";
 
@@ -13,6 +13,17 @@ export class HaAssistChatRichContent extends LitElement {
 
   @property({ attribute: false })
   public content: AssistChatRichContent[] = [];
+
+  @state() private _markdownLoaded = !!customElements.get("ha-markdown");
+
+  protected willUpdate() {
+    if (
+      !this._markdownLoaded &&
+      this.content.some((block) => block.type === "markdown")
+    ) {
+      this._loadMarkdown();
+    }
+  }
 
   protected render() {
     if (!this.content.length) {
@@ -32,33 +43,58 @@ export class HaAssistChatRichContent extends LitElement {
       case "text":
         return this._renderTextBlock(block, index);
       case "markdown":
-        return this._renderTextBlock(block, index);
+        return this._renderMarkdownBlock(block, index);
       case "code":
         return this._renderCodeBlock(block, index);
       case "entity":
         return this._renderEntityBlock(block, index);
       default:
-        return this._renderFallbackBlock(block, index);
+        return this._renderFallbackBlock(block);
     }
+  }
+
+  private async _loadMarkdown() {
+    await import("./ha-markdown");
+    this._markdownLoaded = true;
   }
 
   private _renderTextBlock(
     block: AssistChatRichContent,
-    index: number
+    _index: number
   ): TemplateResult {
     if (typeof block.content !== "string") {
-      return this._renderFallbackBlock(block, index);
+      return this._renderFallbackBlock(block);
     }
 
     return html`<div class="block text">${block.content}</div>`;
   }
 
-  private _renderCodeBlock(
+  private _renderMarkdownBlock(
     block: AssistChatRichContent,
     index: number
   ): TemplateResult {
+    if (typeof block.content !== "string") {
+      return this._renderFallbackBlock(block);
+    }
+
+    if (!this._markdownLoaded) {
+      return this._renderTextBlock(block, index);
+    }
+
+    return html`<ha-markdown
+      class="block markdown"
+      breaks
+      cache
+      .content=${block.content}
+    ></ha-markdown>`;
+  }
+
+  private _renderCodeBlock(
+    block: AssistChatRichContent,
+    _index: number
+  ): TemplateResult {
     if (typeof block.code !== "string") {
-      return this._renderFallbackBlock(block, index);
+      return this._renderFallbackBlock(block);
     }
 
     return html`<pre class="block code"><code>${block.code}</code></pre>`;
@@ -66,7 +102,7 @@ export class HaAssistChatRichContent extends LitElement {
 
   private _renderEntityBlock(
     block: AssistChatRichContent,
-    index: number
+    _index: number
   ): TemplateResult {
     const entityId =
       typeof block.entity_id === "string"
@@ -76,7 +112,7 @@ export class HaAssistChatRichContent extends LitElement {
           : undefined;
 
     if (!entityId) {
-      return this._renderFallbackBlock(block, index);
+      return this._renderFallbackBlock(block);
     }
 
     return html`<div class="block entity">
@@ -99,10 +135,7 @@ export class HaAssistChatRichContent extends LitElement {
     `;
   }
 
-  private _renderFallbackBlock(
-    block: AssistChatRichContent,
-    _index: number
-  ): TemplateResult {
+  private _renderFallbackBlock(block: AssistChatRichContent): TemplateResult {
     return html`<pre class="block code"><code>${stringifyBlock(
       block
     )}</code></pre>`;
