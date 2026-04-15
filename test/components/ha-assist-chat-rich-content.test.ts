@@ -102,16 +102,12 @@ describe("ha-assist-chat-rich-content", () => {
     document.body.append(element);
     await element.updateComplete;
 
-    const stateCard = element.shadowRoot!.querySelector(
-      "state-card-content"
-    ) as MockStateCardContent | null;
+    const stateCard = element.shadowRoot!.querySelector("state-card-content");
 
     expect(stateCard).not.toBeNull();
-    if (!stateCard) {
-      throw new Error("Expected state-card-content to render");
-    }
+    const typedStateCard = stateCard as MockStateCardContent;
 
-    expect(stateCard.stateObj.entity_id).toBe("light.kitchen");
-    expect(stateCard.hass).toBe(element.hass);
+    expect(typedStateCard.stateObj.entity_id).toBe("light.kitchen");
+    expect(typedStateCard.hass).toBe(element.hass);
   });
 });
