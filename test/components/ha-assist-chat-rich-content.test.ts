@@ -73,6 +73,11 @@ describe("extractAssistChatRichContent", () => {
 
 describe("ha-assist-chat-rich-content", () => {
   it("renders entity blocks with state-card-content controls", async () => {
+    type MockStateCardContent = HTMLElement & {
+      stateObj: { entity_id: string };
+      hass: unknown;
+    };
+
     const element = document.createElement(
       "ha-assist-chat-rich-content"
     ) as HaAssistChatRichContent;
@@ -99,15 +104,14 @@ describe("ha-assist-chat-rich-content", () => {
 
     const stateCard = element.shadowRoot!.querySelector(
       "state-card-content"
-    ) as
-      | (HTMLElement & {
-          stateObj?: { entity_id?: string };
-          hass?: unknown;
-        })
-      | null;
+    ) as MockStateCardContent | null;
 
     expect(stateCard).not.toBeNull();
-    expect(stateCard!.stateObj.entity_id).toBe("light.kitchen");
-    expect(stateCard!.hass).toBe(element.hass);
+    if (!stateCard) {
+      throw new Error("Expected state-card-content to render");
+    }
+
+    expect(stateCard.stateObj.entity_id).toBe("light.kitchen");
+    expect(stateCard.hass).toBe(element.hass);
   });
 });
