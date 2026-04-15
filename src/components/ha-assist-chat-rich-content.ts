@@ -6,6 +6,7 @@ import {
   getEntityId,
   type AssistChatRichContent,
 } from "./assist-chat-rich-content-types";
+import "../state-summary/state-card-content";
 
 const stringifyBlock = (value: unknown): string =>
   JSON.stringify(value, null, 2);
@@ -140,16 +141,14 @@ export class HaAssistChatRichContent extends LitElement {
     }
 
     const entityName = this.hass.formatEntityName(stateObj, { type: "entity" });
-    const entityState = this.hass.formatEntityState(stateObj);
 
     return html`
-      <div
-        class="entity-summary"
-        role="article"
-        aria-label=${`${entityName}: ${entityState}`}
-      >
-        <div class="entity-name">${entityName}</div>
-        <div class="entity-state">${entityState}</div>
+      <div class="entity-summary" role="article" aria-label=${entityName}>
+        <state-card-content
+          in-dialog
+          .hass=${this.hass}
+          .stateObj=${stateObj}
+        ></state-card-content>
       </div>
     `;
   }
@@ -192,6 +191,11 @@ export class HaAssistChatRichContent extends LitElement {
     .entity-state {
       margin-top: var(--ha-space-1);
       color: var(--secondary-text-color);
+    }
+
+    state-card-content {
+      display: block;
+      width: 100%;
     }
 
     .code {
