@@ -188,11 +188,6 @@ export class HaAssistChatRichContent extends LitElement {
       font-weight: var(--ha-font-weight-medium);
     }
 
-    .entity-state {
-      margin-top: var(--ha-space-1);
-      color: var(--secondary-text-color);
-    }
-
     state-card-content {
       display: block;
       width: 100%;
