@@ -7,6 +7,7 @@ import {
   it,
   vi,
 } from "vitest";
+import type { HaAssistChatRichContent } from "../../src/components/ha-assist-chat-rich-content";
 import { extractAssistChatRichContent } from "../../src/components/assist-chat-rich-content-types";
 
 afterEach(() => {
@@ -74,7 +75,7 @@ describe("ha-assist-chat-rich-content", () => {
   it("renders entity blocks with state-card-content controls", async () => {
     const element = document.createElement(
       "ha-assist-chat-rich-content"
-    ) as any;
+    ) as HaAssistChatRichContent;
 
     element.hass = {
       states: {
@@ -86,9 +87,11 @@ describe("ha-assist-chat-rich-content", () => {
           last_updated: "2026-04-15T00:00:00.000Z",
         },
       },
-      formatEntityName: (stateObj) => stateObj.attributes.friendly_name,
-      formatEntityState: (stateObj) => stateObj.state,
-    };
+      formatEntityName: (stateObj: {
+        attributes: { friendly_name?: string };
+      }) => stateObj.attributes.friendly_name,
+      formatEntityState: (stateObj: { state: string }) => stateObj.state,
+    } as HaAssistChatRichContent["hass"];
     element.content = [{ type: "entity", entity_id: "light.kitchen" }];
 
     document.body.append(element);
@@ -96,7 +99,12 @@ describe("ha-assist-chat-rich-content", () => {
 
     const stateCard = element.shadowRoot!.querySelector(
       "state-card-content"
-    ) as any | null;
+    ) as
+      | (HTMLElement & {
+          stateObj?: { entity_id?: string };
+          hass?: unknown;
+        })
+      | null;
 
     expect(stateCard).not.toBeNull();
     expect(stateCard!.stateObj.entity_id).toBe("light.kitchen");
