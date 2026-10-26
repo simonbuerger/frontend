@@ -32,7 +32,6 @@ import { stringCompare } from "../../common/string/compare";
 import type { LocalizeFunc } from "../../common/translations/localize";
 import { debounce } from "../../common/util/debounce";
 import { groupBy } from "../../common/util/group-by";
-import { nextRender } from "../../common/util/render-status";
 import { internationalizationContext } from "../../data/context";
 import type { FrontendLocaleData } from "../../data/translation";
 import { haStyleScrollbar } from "../../resources/styles";
@@ -984,16 +983,7 @@ export class HaDataTable extends LitElement {
           )
         : filteredData;
 
-    const [data] = await Promise.all([prom, nextRender]);
-
-    const curTime = new Date().getTime();
-    const elapsed = curTime - startTime;
-
-    if (elapsed < 100) {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100 - elapsed);
-      });
-    }
+    const data = await prom;
 
     if (!forceUpdate && this._curRequest !== startTime) {
       return;
