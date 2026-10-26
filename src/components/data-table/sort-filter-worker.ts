@@ -213,9 +213,35 @@ const sortData = (
     return 0;
   });
 
+const filterDataIndexed = (
+  data: DataTableRowData[],
+  columns: SortableColumnContainer,
+  filter: string
+): number[] => {
+  const indexByRow = new Map<DataTableRowData, number>();
+  data.forEach((row, index) => indexByRow.set(row, index));
+  return filterData(data, columns, filter).map((row) => indexByRow.get(row)!);
+};
+
+const sortDataIndexed = (
+  data: DataTableRowData[],
+  column: ClonedDataTableColumnData,
+  direction: SortingDirection,
+  sortColumn: string,
+  language?: string
+): number[] => {
+  const indexByRow = new Map<DataTableRowData, number>();
+  data.forEach((row, index) => indexByRow.set(row, index));
+  return sortData(data, column, direction, sortColumn, language).map((row) =>
+    indexByRow.get(row)!
+  );
+};
+
 const api = {
   filterData,
   sortData,
+  filterDataIndexed,
+  sortDataIndexed,
 };
 
 export type Api = typeof api;
