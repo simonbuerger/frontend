@@ -67,9 +67,9 @@ export const formatNumber = (
   localeOptions?: FrontendLocaleData,
   options?: Intl.NumberFormatOptions
 ): string =>
-  formatNumberToParts(num, localeOptions, options)
-    .map((part) => part.value)
-    .join("");
+  getNumberFormatterForValue(num, localeOptions, options)?.format(
+    Number(num)
+  ) ?? String(num);
 
 /**
  * Returns an array of objects containing the formatted number in parts
@@ -81,7 +81,16 @@ export const formatNumberToParts = (
   num: string | number,
   localeOptions?: FrontendLocaleData,
   options?: Intl.NumberFormatOptions
-): any[] => {
+): any[] =>
+  getNumberFormatterForValue(num, localeOptions, options)?.formatToParts(
+    Number(num)
+  ) ?? [{ type: "literal", value: num }];
+
+const getNumberFormatterForValue = (
+  num: string | number,
+  localeOptions?: FrontendLocaleData,
+  options?: Intl.NumberFormatOptions
+): Intl.NumberFormat | undefined => {
   const locale = localeOptions
     ? numberFormatToLocale(localeOptions)
     : undefined;
@@ -90,10 +99,7 @@ export const formatNumberToParts = (
     localeOptions?.number_format !== NumberFormat.none &&
     !Number.isNaN(Number(num))
   ) {
-    return getNumberFormatter(
-      locale,
-      getDefaultFormatOptions(num, options)
-    ).formatToParts(Number(num));
+    return getNumberFormatter(locale, getDefaultFormatOptions(num, options));
   }
 
   if (
@@ -108,10 +114,10 @@ export const formatNumberToParts = (
         ...options,
         useGrouping: false,
       })
-    ).formatToParts(Number(num));
+    );
   }
 
-  return [{ type: "literal", value: num }];
+  return undefined;
 };
 
 /**

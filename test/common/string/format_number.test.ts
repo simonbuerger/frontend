@@ -3,6 +3,7 @@ import type { HassEntity } from "home-assistant-js-websocket";
 
 import {
   formatNumber,
+  formatNumberToParts,
   getDefaultFormatOptions,
   getNumberFormatOptions,
 } from "../../../src/common/number/format_number";
@@ -29,6 +30,52 @@ describe("formatNumber", () => {
   // Node only ships with English support for `Intl`, so we cannot test for other number formats here.
   it("Formats English numbers", () => {
     assert.strictEqual(formatNumber(1234.5, defaultLocale), "1,234.5");
+  });
+
+  it("Matches the parts for every number format, precision, and special value", () => {
+    const values = [
+      1234.5,
+      -1234.5,
+      -0,
+      0,
+      "1234.500",
+      "1e-7",
+      "",
+      "unavailable",
+      NaN,
+      Infinity,
+      -Infinity,
+    ];
+    const options: (Intl.NumberFormatOptions | undefined)[] = [
+      undefined,
+      { maximumFractionDigits: 0 },
+      { minimumFractionDigits: 2, maximumFractionDigits: 3 },
+      { style: "currency", currency: "EUR" },
+      { style: "unit", unit: "celsius" },
+      { notation: "compact" },
+      { signDisplay: "always" },
+    ];
+    const locales = [
+      undefined,
+      ...Object.values(NumberFormat).map((number_format) => ({
+        ...defaultLocale,
+        language: "de",
+        number_format,
+      })),
+    ];
+
+    for (const locale of locales) {
+      for (const value of values) {
+        for (const formatOptions of options) {
+          assert.strictEqual(
+            formatNumber(value, locale, formatOptions),
+            formatNumberToParts(value, locale, formatOptions)
+              .map((part) => part.value)
+              .join("")
+          );
+        }
+      }
+    }
   });
 
   it("Test format 'none' (keep dot despite language 'de')", () => {
