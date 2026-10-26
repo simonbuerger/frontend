@@ -30,6 +30,7 @@ import type { LovelaceCardFeatureContext } from "../card-features/types";
 import { findEntities } from "../common/find-entities";
 import { handleAction } from "../common/handle-action";
 import { hasAction } from "../common/has-action";
+import { hasConfigOrEntityChanged } from "../common/has-changed";
 import { createEntityNotFoundWarning } from "../components/hui-warning";
 import type {
   LovelaceCard,
@@ -90,6 +91,30 @@ export class HuiTileCard extends LitElement implements LovelaceCard {
   @state() private _featureContext: LovelaceCardFeatureContext = {};
 
   @state() private _timerFinished = false;
+
+  protected shouldUpdate(changedProps: PropertyValues): boolean {
+    const oldHass = changedProps.get("hass") as HomeAssistant | undefined;
+    if (
+      !this._config ||
+      !oldHass ||
+      !this.hass ||
+      changedProps.size > 1 ||
+      // Updates without a new state map can refresh entity picture tokens.
+      oldHass.states === this.hass.states ||
+      oldHass.connection !== this.hass.connection ||
+      oldHass.hassUrl !== this.hass.hassUrl ||
+      // Picture tokens can change alongside an unrelated state update.
+      this._config.show_entity_picture ||
+      // Features can depend on entities other than the tile's entity.
+      this._config.features?.length ||
+      // Location badges also depend on zone entities.
+      ["person", "device_tracker"].includes(computeDomain(this._config.entity))
+    ) {
+      return true;
+    }
+
+    return hasConfigOrEntityChanged(this, changedProps);
+  }
 
   protected willUpdate(changedProps: PropertyValues): void {
     super.willUpdate(changedProps);
